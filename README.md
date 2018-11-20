@@ -1,6 +1,6 @@
-# canonsegmentation
+  canonsegmentation
 Training data for word segmentation adjustment rules
 
-## kt-no-tantra
+   kt￥no￥tantra
 
-Derge Kangyur and Tengyur, lemmas + affixed particles
+Derge Kangyur and Tengyur, lemmas # affixed particles
