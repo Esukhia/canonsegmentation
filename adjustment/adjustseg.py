@@ -4,7 +4,7 @@ import copy
 from pybo import *
 
 
-path = Path('kt-no-tantra')
+path = Path('../kt-no-tantra')
 
 volumes = [
     '100 དབུ་མ། ཞ_cleaned_cleaned_cleaned.txt',
@@ -151,11 +151,12 @@ class AdjustSeg:
         adjusted_token = []
         for token in token_list:
             # frist adjust all the non ambiguous segmentation
-            if not token.content.endswith('་'):
-                token.content += '་'
-
-            if token.content in self.nonambiguous:
-                matched_idx = self.nonambiguous.index(token.content)
+            print("cleaned -->", token.cleaned_content)
+            if token.content in self.nonambiguous or token.content+'་' in self.nonambiguous:
+                if not token.content.endswith('་'):
+                    matched_idx = self.nonambiguous.index(token.content+'་')
+                else:
+                    matched_idx = self.nonambiguous.index(token.content)
                 split_idx = self.c_nonambiguous[matched_idx].index('+')
                 s = self._split_token(token, split_idx)
                 adjusted_token.extend(s)
