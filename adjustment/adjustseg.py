@@ -35,8 +35,6 @@ class AdjustSeg:
             if is_word:
                 self.tokens.append(token)
 
-        # print(*self.tokens, sep='\n')
-
 
     def _to_words(self, tokens):
         return ['{}{}'.format(*tk.split('+')) for tk in tokens]
@@ -151,7 +149,6 @@ class AdjustSeg:
         adjusted_token = []
         for token in token_list:
             # frist adjust all the non ambiguous segmentation
-            print("cleaned -->", token.cleaned_content)
             if token.content in self.nonambiguous or token.content+'་' in self.nonambiguous:
                 if not token.content.endswith('་'):
                     matched_idx = self.nonambiguous.index(token.content+'་')
@@ -174,10 +171,8 @@ if __name__ == "__main__":
     token_list = tok.tokenize(string, split_affixes=True)
 
     print("Before seg adjustment")
-    for token in token_list:
-        print(token.content)
+    print(*[tk.content for tk in token_list], sep='\n')
 
     print("After seg adjustment")
     adjusted_tokens = adj.adjust(token_list)
-    for token in adjusted_tokens:
-        print(token.content)
+    print(*[tk.content for tk in adjusted_tokens], sep='\n')
