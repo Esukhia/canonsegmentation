@@ -1,27 +1,21 @@
 from pathlib import Path
-import copy
-
 from pybo import *
 
 
-path = Path('../kt-no-tantra')
-
-volumes = [
-    '100 དབུ་མ། ཞ_cleaned_cleaned_cleaned.txt',
-    '001_cleaned_cleaned_cleaned.txt',
-    '044_cleaned_cleaned_cleaned.txt'
-]
-
 class AdjustSeg:
-    def __init__(self):
+    def __init__(self, path, volumes):
+        self.path = path
+        self.volumes = volumes
         self.tokens = []
         self.ambiguous = None
+        self.c_ambiguos = None
         self.nonambiguous = None
+        self.c_nonambiguous = None
         self._build_token_list()
         self._classify_ambiguity()
 
     def _build_token_list(self):
-        for p in path.glob("*.*"):
+        for p in self.path.glob("*.*"):
             with open(p) as f:
                 _tokens = f.read().split()
 
@@ -36,14 +30,16 @@ class AdjustSeg:
                 self.tokens.append(token)
 
 
-    def _to_words(self, tokens):
-        return ['{}{}'.format(*tk.split('+')) for tk in tokens]
 
 
     def _classify_ambiguity(self):
+
+        def __to_words(tokens):
+            return ['{}{}'.format(*tk.split('+')) for tk in tokens]
+
         amb, nonamb = [], []
-        for volume in volumes:
-            with open(path/volume) as f:
+        for volume in self.volumes:
+            with open(self.path/volume) as f:
                 tokens = f.read().split()
                 for token in tokens:
                     if '+' not in token: continue
@@ -55,8 +51,8 @@ class AdjustSeg:
 
         self.c_ambiguous, self.c_nonambiguous = list(set(amb)), list(set(nonamb))
 
-        self.ambiguous = self._to_words(self.c_ambiguous)
-        self.nonambiguous = self._to_words(self.c_nonambiguous)
+        self.ambiguous = __to_words(self.c_ambiguous)
+        self.nonambiguous = __to_words(self.c_nonambiguous)
 
 
     def stats(self):
@@ -103,9 +99,6 @@ class AdjustSeg:
             second_token_char_groups = __create_char_groups(token.char_groups,
                                                             second_keys,
                                                             split_idx)
-            # print(token.char_groups)
-            # print(first_token_char_groups)
-            # print(second_token_char_groups)
 
             return first_token_char_groups, second_token_char_groups
 
@@ -164,15 +157,24 @@ class AdjustSeg:
 
 
 if __name__ == "__main__":
+
+    path = Path('../kt-no-tantra')
+
+    volumes = [
+        '100 དབུ་མ། ཞ_cleaned_cleaned_cleaned.txt',
+        '001_cleaned_cleaned_cleaned.txt',
+        '044_cleaned_cleaned_cleaned.txt'
+    ]
+
     tok = BoTokenizer('POS')
-    adj = AdjustSeg()
+    adj = AdjustSeg(path, volumes)
 
     string = 'སྒྲུབ་པའི་ཆོས་དང་མི་མཐུན་པའི་ཕྱོགས་ཀྱི་དཔེ་ཡིན་པ་ར་གོ་རིམས་བཞིན་དུ་སྦྱར་རོ་།།'
     token_list = tok.tokenize(string, split_affixes=True)
 
     print("Before seg adjustment")
-    print(*[tk.content for tk in token_list], sep='\n')
+    print(*[tk.content for tk in token_list], sep=' ')
 
     print("After seg adjustment")
     adjusted_tokens = adj.adjust(token_list)
-    print(*[tk.content for tk in adjusted_tokens], sep='\n')
+    print(*[tk.content for tk in adjusted_tokens], sep=' ')
