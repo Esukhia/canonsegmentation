@@ -3,16 +3,18 @@ from pybo import *
 
 
 class AdjustSeg:
+
     def __init__(self, path, volumes):
         self.path = path
         self.volumes = volumes
-        self.tokens = []
+        self.token_corpus = []
         self.ambiguous = None
         self.c_ambiguos = None
         self.nonambiguous = None
         self.c_nonambiguous = None
         self._build_token_list()
         self._classify_ambiguity()
+
 
     def _build_token_list(self):
         for p in self.path.glob("*.*"):
@@ -27,27 +29,38 @@ class AdjustSeg:
                 if char in non_words:
                     is_word = False
             if is_word:
-                self.tokens.append(token)
-
-
+                self.token_corpus.append(token)
 
 
     def _classify_ambiguity(self):
 
-        def __to_words(tokens):
-            return ['{}{}'.format(*tk.split('+')) for tk in tokens]
+        def __to_words(corrected_tokens):
+            token_words = []
+            for tk in corrected_tokens:
+                if '+' in tk:
+                    token_words.append('{}{}'.format(*tk.split('+')))
+                else:
+                    token_words.append('{}{}'.format(*tk.split('-')))
+            return token_words
 
         amb, nonamb = [], []
+        prev_token = None
         for volume in self.volumes:
             with open(self.path/volume) as f:
                 tokens = f.read().split()
                 for token in tokens:
-                    if '+' not in token: continue
-                    first_tk, second_tk = token.split('+')
-                    if f'{first_tk}{second_tk}' in self.tokens:
-                        amb.append(token)
-                    else:
-                        nonamb.append(token)
+                    if '+' in token:
+                        first_tk, second_tk = token.split('+')
+                        if f'{first_tk}{second_tk}' in self.token_corpus:
+                            amb.append(token)
+                        else:
+                            nonamb.append(token)
+                    elif '-' in token:
+                        if f'{prev_token}' in self.token_corpus and f'{token[1:]}' in self.token_corpus:
+                            amb.append(f'{prev_token}{token}')
+                        else:
+                            nonamb.append(f'{prev_token}{token}')
+                    prev_token = token
 
         self.c_ambiguous, self.c_nonambiguous = list(set(amb)), list(set(nonamb))
 
@@ -56,17 +69,17 @@ class AdjustSeg:
 
 
     def stats(self):
-        print("# of words:", len(self.tokens))
-        print("# of Ambiguous:", len(self.ambiguous))
-        print("# of Nonambiguos:", len(self.nonambiguous))
+        print("# of words:", len(self.token_corpus))
+        print("# of Ambiguous:", len(self.c_ambiguous))
+        print("# of Nonambiguos:", len(self.c_nonambiguous))
 
         print()
         print("Ambiguous types:")
-        print(*self.ambiguous, sep='\n')
+        print(*self.c_ambiguous, sep='\n')
 
         print()
         print("Non ambiguous types:")
-        print(*self.nonambiguous[:7], sep='\n')
+        print(*self.c_nonambiguous[:7], sep='\n')
 
 
     def _split_token(self, token, split_idx):
@@ -125,7 +138,7 @@ class AdjustSeg:
         first_token.type = token.type
         first_token.char_groups = first_token_char_groups
         first_token.syls = first_token_syls
-        first_token.len = len(token.content)
+        first_token.len = len(first_token_char_groups)
         first_token.start = token.start
 
         second_token.content = second_token_content
@@ -133,7 +146,7 @@ class AdjustSeg:
         second_token.char_groups = second_token_char_groups
         second_token.syls = second_token_syls
         second_token.len = len(second_token.content)
-        second_token.start = token.start + token.len
+        second_token.start = token.start + split_idx
 
         return [first_token, second_token]
 
@@ -147,8 +160,14 @@ class AdjustSeg:
                     matched_idx = self.nonambiguous.index(token.content+'་')
                 else:
                     matched_idx = self.nonambiguous.index(token.content)
-                split_idx = self.c_nonambiguous[matched_idx].index('+')
-                s = self._split_token(token, split_idx)
+                try:
+                    print(token.content)
+                    print(self.nonambiguous[matched_idx])
+                    print(self.c_nonambiguous[matched_idx])
+                    split_idx = self.c_nonambiguous[matched_idx].index('+')
+                    s = self._split_token(token, split_idx)
+                except:
+                    pass
                 adjusted_token.extend(s)
             else:
                 adjusted_token.append(token)
