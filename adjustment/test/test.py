@@ -12,16 +12,24 @@ from pathlib import Path
 from pybo import *
 from adjustseg import AdjustSeg
 
-if __name__ == "__main__":
-    path = Path('../../kt-no-tantra')
+def test_tokens(adj):
+    for token in adj.c_ambiguous:
+        assert not token.startswith("-")
 
-    volumes = [
-        '100 དབུ་མ། ཞ_cleaned_cleaned_cleaned.txt',
-        '001_cleaned_cleaned_cleaned.txt',
-        '044_cleaned_cleaned_cleaned.txt'
-    ]
+    for token in adj.c_nonambiguous:
+        assert not token.startswith("-")
+
+if __name__ == "__main__":
+
+    path = Path(".")
+    volumes = ["testcase"]
 
     tok = BoTokenizer('POS')
     adj = AdjustSeg(path, volumes)
 
     adj.stats()
+
+    # testcase
+    test_tokens(adj)
+
+    print("Test pass.... ok")

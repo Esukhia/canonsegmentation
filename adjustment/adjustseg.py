@@ -5,11 +5,12 @@ from pybo import *
 class AdjustSeg:
 
     def __init__(self, path, volumes):
+        self.win_sz = 2
         self.path = path
         self.volumes = volumes
         self.token_corpus = []
         self.ambiguous = None
-        self.c_ambiguos = None
+        self.c_ambiguous = None
         self.nonambiguous = None
         self.c_nonambiguous = None
         self._build_token_list()
@@ -17,8 +18,8 @@ class AdjustSeg:
 
 
     def _build_token_list(self):
-        for p in self.path.glob("*.*"):
-            with open(p) as f:
+        for volume in self.volumes:
+            with open(self.path/volume) as f:
                 _tokens = f.read().split()
 
         # remove all the tokens which are not word
@@ -44,7 +45,7 @@ class AdjustSeg:
             return token_words
 
         amb, nonamb = [], []
-        prev_token = None
+        hist_tokens = [None]*self.win_sz
         for volume in self.volumes:
             with open(self.path/volume) as f:
                 tokens = f.read().split()
@@ -56,11 +57,20 @@ class AdjustSeg:
                         else:
                             nonamb.append(token)
                     elif '-' in token:
-                        if f'{prev_token}' in self.token_corpus and f'{token[1:]}' in self.token_corpus:
-                            amb.append(f'{prev_token}{token}')
-                        else:
-                            nonamb.append(f'{prev_token}{token}')
-                    prev_token = token
+                        s = [token]
+                        for i in range(self.win_sz):
+                            if hist_tokens[-1]:
+                                prev_token = hist_tokens[-(i+1)]
+                                s.insert(0, prev_token)
+                                if '-' not in prev_token: break
+                                nonamb.pop()
+
+                        nonamb.append(''.join(s))
+
+                    # store the prev two token
+                    if hist_tokens[-1] is not None:
+                        hist_tokens[-2] = hist_tokens[-1]
+                    hist_tokens[-1] = token
 
         self.c_ambiguous, self.c_nonambiguous = list(set(amb)), list(set(nonamb))
 
@@ -79,7 +89,7 @@ class AdjustSeg:
 
         print()
         print("Non ambiguous types:")
-        print(*self.c_nonambiguous[:7], sep='\n')
+        print(*self.c_nonambiguous[:20], sep='\n')
 
 
     def _split_token(self, token, split_idx):
@@ -160,15 +170,13 @@ class AdjustSeg:
                     matched_idx = self.nonambiguous.index(token.content+'་')
                 else:
                     matched_idx = self.nonambiguous.index(token.content)
-                try:
-                    print(token.content)
-                    print(self.nonambiguous[matched_idx])
-                    print(self.c_nonambiguous[matched_idx])
+                if '+' in self.c_nonambiguous[matched_idx]:
                     split_idx = self.c_nonambiguous[matched_idx].index('+')
                     s = self._split_token(token, split_idx)
-                except:
-                    pass
-                adjusted_token.extend(s)
+                    adjusted_token.extend(s)
+                    break
+                else:
+                    adjusted_token.append(token)
             else:
                 adjusted_token.append(token)
 
@@ -192,8 +200,8 @@ if __name__ == "__main__":
     token_list = tok.tokenize(string, split_affixes=True)
 
     print("Before seg adjustment")
-    print(*[tk.content for tk in token_list], sep=' ')
+    print(*[tk.content for tk in token_list], sep='\n')
 
     print("After seg adjustment")
     adjusted_tokens = adj.adjust(token_list)
-    print(*[tk.content for tk in adjusted_tokens], sep=' ')
+    print(*[tk.content for tk in adjusted_tokens], sep='\n')
